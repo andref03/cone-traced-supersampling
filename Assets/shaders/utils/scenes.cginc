@@ -1,4 +1,4 @@
-﻿#ifndef SCENES_H
+#ifndef SCENES_H
 #define SCENES_H
 
 /* scene definitions: import and define SCENE variable */
@@ -10,5 +10,6 @@
 #define SCENE_SINGLE 5
 #define SCENE_SPONZA 6
 #define SCENE_SPONZA_SHOWCASE 7
+#define SCENE_TRANSPARENCY 8
 
 #endif

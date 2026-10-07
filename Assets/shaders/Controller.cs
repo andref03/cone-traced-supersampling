@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace shaders
@@ -40,6 +40,14 @@ namespace shaders
                 Vector3 pos = new Vector3(0f, 0f, 0f);
                 this.mat.SetVector("_MousePos", new Vector4(1f - pos.x / Screen.width, pos.y / Screen.height, 0f, 0f));
                 Debug.Log("Reset mouse position to default.");
+            }
+
+            if (Input.GetKeyDown(KeyCode.T))
+            {
+                float currentTrans = this.mat.GetFloat("_USE_TRANSPARENCY");
+                float newTrans = (currentTrans > 0.5f) ? 0f : 1f;
+                this.mat.SetFloat("_USE_TRANSPARENCY", newTrans);
+                Debug.Log("Toggled Transparency (K-Bitmasks): " + (newTrans > 0.5f ? "ON (After)" : "OFF (Before)"));
             }
         }
     }

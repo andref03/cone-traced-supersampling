@@ -1,4 +1,4 @@
-﻿#ifndef RENDER_DEFS_H
+#ifndef RENDER_DEFS_H
 #define RENDER_DEFS_H
 
 /* ---------------------------------------- */
@@ -55,6 +55,14 @@ float _SUBPIXEL_EDGE_RESOLVE_CONE_MULT = 1.0;
 float _SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MAX = 0.999;
 float _SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MIN = 0.9;
 float _SUBPIXEL_EDGE_RESOLVE_CURVATURE_THRESHOLD = 0.00001;
+
+/* ---------------------------------------- */
+// Transparency parameters (K-bitmasks)
+
+bool _USE_TRANSPARENCY = false;
+int _TRANSPARENCY_K = 4;
+float _TRANSPARENT_ALPHA_1 = 0.45;
+float _TRANSPARENT_ALPHA_2 = 0.55;
 
 /* ---------------------------------------- */
 // Sphere tracing parameters

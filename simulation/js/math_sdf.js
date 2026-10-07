@@ -179,5 +179,24 @@ export const MathSDF = {
         n = n - ((n >>> 1) & 0x55555555);
         n = (n & 0x33333333) + ((n >>> 2) & 0x33333333);
         return (((n + (n >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
+    },
+
+    /**
+     * K-Bitmasks Non-Binary Visibility Accumulator (from TVCG 2023 Sec. VI)
+     */
+    accumulateKBitmasks(kMasks, geomMask, alpha, K = 4) {
+        const L = alpha >= 0.99 ? K : Math.max(1, Math.round(alpha * K));
+        let addedBits = 0;
+        for (let l = 0; l < L; l++) {
+            for (let k = 0; k < K; k++) {
+                const available = (geomMask & ~kMasks[k]) >>> 0;
+                if (available !== 0) {
+                    kMasks[k] = (kMasks[k] | available) >>> 0;
+                    addedBits += this.bitCountOnes(available);
+                    break;
+                }
+            }
+        }
+        return addedBits / (K * 32);
     }
 };

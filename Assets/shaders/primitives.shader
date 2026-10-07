@@ -19,6 +19,12 @@ Shader "Unlit/primitives"
         _SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MIN ("SER_COSSIM_THRESHOLD_MIN", Range(0.0, 1.0)) = 0.8
         _SUBPIXEL_EDGE_RESOLVE_CURVATURE_THRESHOLD ("SER_CURVATURE_THRESHOLD", Range(0.0, 0.01)) = 0.00001
 
+        [Header(Transparency Settings)]
+        [Toggle] _USE_TRANSPARENCY ("Enable Transparency (K-Bitmasks)", Float) = 0
+        _TRANSPARENCY_K ("Transparency K Levels", Int) = 4
+        _TRANSPARENT_ALPHA_1 ("Glass Alpha 1", Range(0.05, 0.95)) = 0.45
+        _TRANSPARENT_ALPHA_2 ("Glass Alpha 2", Range(0.05, 0.95)) = 0.55
+
         [Toggle] _USE_SUBPIXEL_EDGE_RESOLVE ("Use SER", Float) = 1
         [Toggle] _SUBPIXEL_EDGE_RESOLVE_TWO_PLANE_INTERSECTION ("Resolve subpixel plane-plane intersection visibility", Float) = 1
 

@@ -1,4 +1,4 @@
-﻿#ifndef RENDER_H
+#ifndef RENDER_H
 #define RENDER_H
 
 #include "sdf.cginc"
@@ -210,6 +210,22 @@ int bitCountOnes(int num) {
     return count;
 }
 
+float getSampleAlpha(float id)
+{
+    if (!_USE_TRANSPARENCY)
+        return 1.0;
+    if (abs(id - 101.0) < 0.1)
+        return clamp(_TRANSPARENT_ALPHA_1, 0.05, 0.95);
+    if (abs(id - 102.0) < 0.1)
+        return clamp(_TRANSPARENT_ALPHA_2, 0.05, 0.95);
+    return 1.0;
+}
+
+bool isTransparentSample(float id)
+{
+    return _USE_TRANSPARENCY && (id >= 100.0 && id <= 110.0);
+}
+
 #ifdef USE_SUBPIXEL_EDGE_RESOLVE
 float resolve_primary_edge_visibility(const float3 n1, const float3 n2, float h1, float h2,
     const float3 rd, const float3 searchDir, float coneRadius)
@@ -271,6 +287,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
 #ifdef USE_CTSS_WEIGHTED
     int visibilityMask = 0;
+    int k_masks[4] = { 0, 0, 0, 0 };
 #endif
 
     // previous values for hasHit, hardHit, and sdf call
@@ -374,8 +391,18 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
         if (fullHit)
         {
-            hasFullHit = true;
-            break;
+            if (isTransparentSample(h.y))
+            {
+                // Continue sphere tracing past the transparent surface intersection
+                hasHitP = false;
+                hardHitP = false;
+                t += max(coneRad * 2.5, 0.08);
+            }
+            else
+            {
+                hasFullHit = true;
+                break;
+            }
         }
 
         // update previous h and t
@@ -561,11 +588,41 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
         // compute current visibility mask given pixel projected normal and group's maximum cone occlusion
         int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
-        visibilityMaskCrt &= ~visibilityMask; // correlation with previous hits, removes invisible bits
-        visibilityMask |= visibilityMaskCrt; // update visibility mask given current visibility, adds visible bits
 
-        float visibility = bitCountOnes(visibilityMaskCrt) / 32.; // visible bit ratio
-        float weight = max(MIN_SAMPLE_WEIGHT, visibility);
+        float weight = 0.0;
+        if (_USE_TRANSPARENCY)
+        {
+            // K-bitmasks non-binary visibility accumulation (TVCG 2023 Sec. VI)
+            int K = clamp(_TRANSPARENCY_K, 2, 4);
+            float alpha = getSampleAlpha(sample.id);
+            int L = (alpha >= 0.99) ? K : max(1, (int)round(alpha * (float)K));
+
+            int totalAddedBits = 0;
+            for (int l = 0; l < L; l++)
+            {
+                for (int k = 0; k < K; k++)
+                {
+                    int available = visibilityMaskCrt & (~k_masks[k]);
+                    if (available != 0)
+                    {
+                        k_masks[k] |= available;
+                        totalAddedBits += bitCountOnes(available);
+                        break;
+                    }
+                }
+            }
+            float visRatio = (float)totalAddedBits / (float)(K * 32);
+            weight = max(MIN_SAMPLE_WEIGHT, visRatio);
+        }
+        else
+        {
+            // Original binary visibility mask (Before)
+            visibilityMaskCrt &= ~visibilityMask; // correlation with previous hits, removes invisible bits
+            visibilityMask |= visibilityMaskCrt; // update visibility mask given current visibility, adds visible bits
+
+            float visibility = bitCountOnes(visibilityMaskCrt) / 32.; // visible bit ratio
+            weight = max(MIN_SAMPLE_WEIGHT, visibility);
+        }
 #else
         float weight = 1.0;
 #endif
@@ -580,7 +637,21 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     if (!hasFullHit)
     {
 #ifdef USE_CTSS_WEIGHTED
-        float bgWeight = 1.0 - bitCountOnes(visibilityMask) / 32.0;
+        float bgWeight;
+        if (_USE_TRANSPARENCY)
+        {
+            int K = clamp(_TRANSPARENCY_K, 2, 4);
+            int totalOccupied = 0;
+            for (int k = 0; k < K; k++)
+            {
+                totalOccupied += bitCountOnes(k_masks[k]);
+            }
+            bgWeight = max(0.0, 1.0 - (float)totalOccupied / (float)(K * 32));
+        }
+        else
+        {
+            bgWeight = 1.0 - bitCountOnes(visibilityMask) / 32.0;
+        }
 #else
         float bgWeight = 1.0;
 #endif
