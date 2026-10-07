@@ -1,4 +1,4 @@
-﻿Shader "Unlit/sponza_showcase"
+Shader "Unlit/sponza_showcase"
 {
     Properties
     {
@@ -6,6 +6,9 @@
         _MousePos ("MousePos", Vector) = (0.,0.,0.,0.)
 
         _AA_FACTOR ("AA factor N for NxN grid (supported 1x1, 2x2, 3x3)", Int) = 1
+
+        [Toggle] _ENABLE_CTSS ("Enable CTSS Antialiasing", Float) = 1
+        _COVERAGE_MODE ("Coverage Mode (0:Bitmask, 1:Popcnt, 2:Analytic, 3:Smooth)", Int) = 2
 
         _MAX_RAYMARCH_STEPS ("Sphere Tracing Max Steps", Int) = 2048
 

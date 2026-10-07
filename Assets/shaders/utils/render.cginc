@@ -1,4 +1,4 @@
-﻿#ifndef RENDER_H
+#ifndef RENDER_H
 #define RENDER_H
 
 #include "sdf.cginc"
@@ -210,6 +210,41 @@ int bitCountOnes(int num) {
     return count;
 }
 
+// -----------------------------------------------------------------------------
+// PROPOSTA 1: Funções de Cobertura Subpixel Contínua vs. Discreta
+// -----------------------------------------------------------------------------
+
+// Contagem rápida de bits via hardware POPCNT (Shader Model 4.0+)
+int bitCountOnesFast(int num)
+{
+#if defined(SHADER_API_D3D11) || defined(SHADER_API_D3D12) || defined(SHADER_API_VULKAN) || defined(SHADER_API_METAL) || defined(SHADER_API_GLCORE)
+    return countbits(num);
+#else
+    return bitCountOnes(num);
+#endif
+}
+
+// 1. Função Analítica Contínua de Área do Segmento Circular (Proposta Central)
+// Dado coneOcclusion w em [0, 1], calcula a fração contínua exata da área
+// de um disco unitário cortado por uma reta a uma distância normalizada h do centro:
+// A(h) = (acos(-h) + h * sqrt(1 - h^2)) / PI
+float getContinuousCircularCoverage(float coneOcclusion)
+{
+    float w = saturate(coneOcclusion);
+    // h em [-1, 1], distância com sinal da reta de corte ao centro do cone
+    float h = clamp(2.0 * w - 1.0, -0.9999, 0.9999);
+    const float PI = 3.14159265358979323846;
+    return saturate((acos(-h) + h * sqrt(1.0 - h * h)) / PI);
+}
+
+// 2. Aproximação Polinomial Suave Contínua (Smoothstep C1)
+float getSmoothstepCoverage(float coneOcclusion)
+{
+    float w = saturate(coneOcclusion);
+    return smoothstep(0.0, 1.0, w);
+}
+
+
 #ifdef USE_SUBPIXEL_EDGE_RESOLVE
 float resolve_primary_edge_visibility(const float3 n1, const float3 n2, float h1, float h2,
     const float3 rd, const float3 searchDir, float coneRadius)
@@ -255,6 +290,23 @@ float resolve_primary_edge_visibility(const float3 n1, const float3 n2, float h1
 
 float3 render(const float3 ro, const float3 rd, const float tan_theta, const float3 rdx, const float3 rdy)
 {
+    // Se o CTSS estiver desativado (_ENABLE_CTSS == 0), executa sphere tracing puro (Sem Antialiasing)
+    if (_ENABLE_CTSS < 0.5)
+    {
+        float3 str = sphereTrace(ro, rd, tan_theta, _MAX_RAYMARCH_STEPS, TMIN);
+        if (str.z < 0.0)
+        {
+#ifdef WHITE_BG
+            return float3(1., 1., 1.);
+#else
+            return float3(clamp(FOG_COLOR - max(rd.y, 0.) * 0.3, 0., 1.));
+#endif
+        }
+        float3 pos = ro + rd * str.x;
+        float3 nor = calcNormal(pos);
+        return shadedColor(ro, rd, rdx, rdy, str.y, pos, nor);
+    }
+
     // setup total color and total weight
     float3 colorTotal = float3(0., 0., 0.);
     float weightTotal = 0.;
@@ -271,6 +323,9 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
 #ifdef USE_CTSS_WEIGHTED
     int visibilityMask = 0;
+    float accumulatedContinuousCoverage = 0.0;
+    float2 prevNor2d = float2(0.0, 0.0);
+    float prevCoverage = 0.0;
 #endif
 
     // previous values for hasHit, hardHit, and sdf call
@@ -559,13 +614,54 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
             nor2d = normal2dResolvedEdge;
 #endif
 
-        // compute current visibility mask given pixel projected normal and group's maximum cone occlusion
-        int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
-        visibilityMaskCrt &= ~visibilityMask; // correlation with previous hits, removes invisible bits
-        visibilityMask |= visibilityMaskCrt; // update visibility mask given current visibility, adds visible bits
+        // compute visibility and weights based on selected coverage mode
+        float weight = MIN_SAMPLE_WEIGHT;
 
-        float visibility = bitCountOnes(visibilityMaskCrt) / 32.; // visible bit ratio
-        float weight = max(MIN_SAMPLE_WEIGHT, visibility);
+        if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK)
+        {
+            // MODO 0: Baseline original dos autores (Bitmask 32-bit com loop iterativo)
+            int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
+            visibilityMaskCrt &= ~visibilityMask; // correlaciona com anteriores
+            visibilityMask |= visibilityMaskCrt;
+            float visibility = bitCountOnes(visibilityMaskCrt) / 32.0;
+            weight = max(MIN_SAMPLE_WEIGHT, visibility);
+        }
+        else if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK_POPCNT)
+        {
+            // MODO 1: Bitmask 32-bit com hardware POPCNT nativo (countbits)
+            int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
+            visibilityMaskCrt &= ~visibilityMask;
+            visibilityMask |= visibilityMaskCrt;
+            float visibility = bitCountOnesFast(visibilityMaskCrt) / 32.0;
+            weight = max(MIN_SAMPLE_WEIGHT, visibility);
+        }
+        else
+        {
+            // MODO 2 ou 3: Cobertura Contínua (Analítica ou Polinomial Suave)
+            float sampleCoverage = (_COVERAGE_MODE == COVERAGE_MODE_SMOOTHSTEP) ?
+                getSmoothstepCoverage(sample.occlusion) :
+                getContinuousCircularCoverage(sample.occlusion);
+
+            float visibleFrac = 0.0;
+            if (i == 0)
+            {
+                visibleFrac = sampleCoverage;
+                accumulatedContinuousCoverage = sampleCoverage;
+            }
+            else
+            {
+                // Correlação direcional suave baseada no alinhamento das normais
+                float normalAlignment = dot(nor2d, prevNor2d);
+                float overlapFactor = saturate((1.0 + normalAlignment) * 0.5);
+                float effectivePriorOcclusion = prevCoverage * overlapFactor;
+                visibleFrac = clamp(sampleCoverage - effectivePriorOcclusion, 0.0, 1.0 - accumulatedContinuousCoverage);
+                accumulatedContinuousCoverage = saturate(accumulatedContinuousCoverage + visibleFrac);
+            }
+
+            prevNor2d = nor2d;
+            prevCoverage = sampleCoverage;
+            weight = max(MIN_SAMPLE_WEIGHT, visibleFrac);
+        }
 #else
         float weight = 1.0;
 #endif
@@ -580,7 +676,19 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     if (!hasFullHit)
     {
 #ifdef USE_CTSS_WEIGHTED
-        float bgWeight = 1.0 - bitCountOnes(visibilityMask) / 32.0;
+        float bgWeight = 1.0;
+        if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK)
+        {
+            bgWeight = 1.0 - bitCountOnes(visibilityMask) / 32.0;
+        }
+        else if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK_POPCNT)
+        {
+            bgWeight = 1.0 - bitCountOnesFast(visibilityMask) / 32.0;
+        }
+        else
+        {
+            bgWeight = saturate(1.0 - accumulatedContinuousCoverage);
+        }
 #else
         float bgWeight = 1.0;
 #endif

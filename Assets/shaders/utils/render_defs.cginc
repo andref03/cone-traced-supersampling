@@ -1,4 +1,4 @@
-﻿#ifndef RENDER_DEFS_H
+#ifndef RENDER_DEFS_H
 #define RENDER_DEFS_H
 
 /* ---------------------------------------- */
@@ -16,6 +16,21 @@ int _AA_FACTOR = 1;
 // CTSS parameters
 
 // #define NO_CTSS // disables CTSS
+
+/* ---------------------------------------- */
+// Coverage Formulation Modes (Pesquisa de Subpixel Coverage):
+// Modo 0: Bitmask Discreta Original (32 bits com loop manual) -> BASELINE DOS AUTORES
+// Modo 1: Bitmask Otimizada (Hardware POPCNT / countbits)
+// Modo 2: Cobertura Analítica Contínua (Segmento Circular) -> PROPOSTA 1 CENTRAL
+// Modo 3: Cobertura Polinomial Suave (Smoothstep)
+
+#define COVERAGE_MODE_BITMASK 0
+#define COVERAGE_MODE_BITMASK_POPCNT 1
+#define COVERAGE_MODE_ANALYTIC 2
+#define COVERAGE_MODE_SMOOTHSTEP 3
+
+int _COVERAGE_MODE = 2; // Padrão: Modo 2 (Analítico Contínuo)
+float _ENABLE_CTSS = 1.0; // 1.0 = Ligado, 0.0 = Sem Antialiasing (Sphere Tracing puro)
 
 #define CTSS_NUM_SAMPLES 8 // maximum number of CTSS samples per pixel
 
