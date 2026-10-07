@@ -49,6 +49,31 @@ namespace shaders
                 this.mat.SetFloat("_USE_TRANSPARENCY", newTrans);
                 Debug.Log("Toggled Transparency (K-Bitmasks): " + (newTrans > 0.5f ? "ON (After)" : "OFF (Before)"));
             }
+
+            // Atalhos para trocar de cena/shader em tempo real:
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+            {
+                var s = Shader.Find("Unlit/primitives");
+                if (s != null) { this.mat.shader = s; Debug.Log("Cena trocada: 1. Primitives"); }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Alpha2))
+            {
+                var s = Shader.Find("Unlit/transparency");
+                if (s != null) { this.mat.shader = s; Debug.Log("Cena trocada: 2. Transparency Test"); }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Alpha3))
+            {
+                var s = Shader.Find("Unlit/sponza");
+                if (s != null) { this.mat.shader = s; Debug.Log("Cena trocada: 3. Sponza"); }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Alpha4))
+            {
+                var s = Shader.Find("Unlit/grid_box");
+                if (s != null) { this.mat.shader = s; Debug.Log("Cena trocada: 4. Grid Box"); }
+            }
         }
     }
 }
