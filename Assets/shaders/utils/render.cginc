@@ -212,7 +212,7 @@ int bitCountOnes(int num) {
 
 float getSampleAlpha(float id)
 {
-    if (!_USE_TRANSPARENCY)
+    if (_USE_TRANSPARENCY < 0.5)
         return 1.0;
     if (abs(id - 101.0) < 0.1)
         return clamp(_TRANSPARENT_ALPHA_1, 0.05, 0.95);
@@ -223,7 +223,7 @@ float getSampleAlpha(float id)
 
 bool isTransparentSample(float id)
 {
-    return _USE_TRANSPARENCY && (id >= 100.0 && id <= 110.0);
+    return (_USE_TRANSPARENCY > 0.5) && (id >= 100.0 && id <= 110.0);
 }
 
 #ifdef USE_SUBPIXEL_EDGE_RESOLVE
@@ -311,11 +311,12 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     }
 #endif
 
+    bool inTransparency = false;
     int numSteps = 0;
     for (; numSteps < _MAX_RAYMARCH_STEPS && t < t_max && numSamples < CTSS_NUM_SAMPLES; numSteps++)
     {
         float3 p = ro + rd * t;
-        float2 h = sdf(p);
+        float2 h = inTransparency ? sdf_opaque(p) : sdf(p);
 
         float coneRad = t * tan_theta;
         float coneOcclusion = (1. - h.x / coneRad) / 2.;
@@ -391,9 +392,10 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
         if (fullHit)
         {
-            if (isTransparentSample(h.y))
+            if (isTransparentSample(h.y) && !inTransparency)
             {
                 // Continue sphere tracing past the transparent surface intersection
+                inTransparency = true;
                 hasHitP = false;
                 hardHitP = false;
                 t += max(coneRad * 2.5, 0.08);
@@ -590,7 +592,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
         int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
 
         float weight = 0.0;
-        if (_USE_TRANSPARENCY)
+        if (_USE_TRANSPARENCY > 0.5)
         {
             // K-bitmasks non-binary visibility accumulation (TVCG 2023 Sec. VI)
             int K = clamp(_TRANSPARENCY_K, 2, 4);
@@ -638,7 +640,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     {
 #ifdef USE_CTSS_WEIGHTED
         float bgWeight;
-        if (_USE_TRANSPARENCY)
+        if (_USE_TRANSPARENCY > 0.5)
         {
             int K = clamp(_TRANSPARENCY_K, 2, 4);
             int totalOccupied = 0;

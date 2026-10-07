@@ -17,7 +17,7 @@ bool isTransparentObj(float id)
     return (id >= 100.0 && id <= 110.0);
 }
 
-float2 sdf(in float3 p)
+float2 sdf_opaque(in float3 p)
 {
     float2 res = float2(1e10, 0.0);
 
@@ -37,16 +37,27 @@ float2 sdf(in float3 p)
     float dBlueBox = sdBox(p - float3(0.05, 0.5, 1.3), float3(0.2, 0.5, 0.2));
     res = opU(res, float2(dBlueBox, ID_OPAQUE_BLUE_BOX));
 
-    // 3. Foreground Transparent Objects (placed directly in front of the background objects)
+    return res;
+}
+
+float2 sdf_transparent(in float3 p)
+{
+    float2 res = float2(1e10, 0.0);
+
     // Glass Sphere (Cyan tint, ID = 101.0)
     float dGlassSphere = sdSphere(p - float3(-0.15, 0.42, -0.05), 0.40);
     res = opU(res, float2(dGlassSphere, ID_TRANSPARENT_SPHERE));
 
-    // Glass Box / Cube (Amber tint, ID = 102.0, partially overlaps the sphere to test multi-transparency)
+    // Glass Box / Cube (Amber tint, ID = 102.0)
     float dGlassBox = sdBox(p - float3(0.32, 0.35, -0.15), float3(0.22, 0.32, 0.22));
     res = opU(res, float2(dGlassBox, ID_TRANSPARENT_BOX));
 
     return res;
+}
+
+float2 sdf(in float3 p)
+{
+    return opU(sdf_opaque(p), sdf_transparent(p));
 }
 
 #endif

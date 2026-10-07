@@ -26,6 +26,10 @@
 #include "sdfs/sdf_primitives.cginc"
 #endif
 
+#if SCENE != SCENE_TRANSPARENCY
+float2 sdf_opaque(in float3 p) { return sdf(p); }
+#endif
+
 /* ---------------------------------------- */
 
 #include "sdfs/normal_defs.cginc"

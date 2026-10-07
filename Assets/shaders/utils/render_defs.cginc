@@ -59,10 +59,10 @@ float _SUBPIXEL_EDGE_RESOLVE_CURVATURE_THRESHOLD = 0.00001;
 /* ---------------------------------------- */
 // Transparency parameters (K-bitmasks)
 
-bool _USE_TRANSPARENCY = false;
-int _TRANSPARENCY_K = 4;
-float _TRANSPARENT_ALPHA_1 = 0.45;
-float _TRANSPARENT_ALPHA_2 = 0.55;
+float _USE_TRANSPARENCY;
+int _TRANSPARENCY_K;
+float _TRANSPARENT_ALPHA_1;
+float _TRANSPARENT_ALPHA_2;
 
 /* ---------------------------------------- */
 // Sphere tracing parameters
