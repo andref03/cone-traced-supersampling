@@ -7,25 +7,41 @@ namespace shaders
     {
         private Material mat;
 
+        private int coverageMode = 2; // 0: Bitmask, 1: Popcnt, 2: Analytic, 3: Smoothstep
+        private bool enableCTSS = true;
+        private int aaFactor = 1; // 1: 1x1, 2: 2x2 (4xSSAA), 3: 3x3 (9xSSAA)
+        private bool showGUI = true;
+
+        private float deltaTime = 0.0f;
+
         void Awake()
         {
             this.mat = this.GetComponent<Renderer>().material;
-
             this.mat.SetVector("_MousePos", new Vector4(1f, 0f, 0f, 0f));
+            ApplyShaderSettings();
+        }
+
+        private void ApplyShaderSettings()
+        {
+            if (this.mat == null) return;
+            this.mat.SetFloat("_ENABLE_CTSS", enableCTSS ? 1.0f : 0.0f);
+            this.mat.SetInt("_COVERAGE_MODE", coverageMode);
+            this.mat.SetInt("_AA_FACTOR", aaFactor);
         }
 
         public static int GetUnixTime()
         {
-            return (int) (DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+            return (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
         }
 
         void Update()
         {
+            deltaTime += (Time.unscaledDeltaTime - deltaTime) * 0.1f;
+
             if (Input.GetMouseButton(0))
             {
                 var pos = Input.mousePosition;
                 this.mat.SetVector("_MousePos", new Vector4(1f - pos.x / Screen.width, pos.y / Screen.height, 0f, 0f));
-                Debug.Log("mousePosition " + pos);
             }
 
             if (Input.GetKeyDown(KeyCode.S))

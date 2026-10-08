@@ -271,6 +271,23 @@ float resolve_primary_edge_visibility(const float3 n1, const float3 n2, float h1
 
 float3 render(const float3 ro, const float3 rd, const float tan_theta, const float3 rdx, const float3 rdy)
 {
+    // Se o CTSS estiver desativado (_ENABLE_CTSS == 0), executa sphere tracing puro (Sem Antialiasing)
+    if (_ENABLE_CTSS < 0.5)
+    {
+        float3 str = sphereTrace(ro, rd, tan_theta, _MAX_RAYMARCH_STEPS, TMIN);
+        if (str.z < 0.0)
+        {
+#ifdef WHITE_BG
+            return float3(1., 1., 1.);
+#else
+            return float3(clamp(FOG_COLOR - max(rd.y, 0.) * 0.3, 0., 1.));
+#endif
+        }
+        float3 pos = ro + rd * str.x;
+        float3 nor = calcNormal(pos);
+        return shadedColor(ro, rd, rdx, rdy, str.y, pos, nor);
+    }
+
     // setup total color and total weight
     float3 colorTotal = float3(0., 0., 0.);
     float weightTotal = 0.;
