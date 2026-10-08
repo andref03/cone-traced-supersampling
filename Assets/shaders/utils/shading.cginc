@@ -1,4 +1,4 @@
-﻿#ifndef SHADING_H
+#ifndef SHADING_H
 #define SHADING_H
 
 #include "sdf.cginc"
@@ -59,6 +59,11 @@ float checkersGradBox(in float2 p, in float2 dpdx, in float2 dpdy)
 
 float3 code2color( const in float m )
 {
+    if (abs(m - 15.0) < 0.1) return float3(0.95, 0.15, 0.15); // Opaque Red Sphere
+    if (abs(m - 25.0) < 0.1) return float3(0.95, 0.75, 0.12); // Opaque Gold Torus
+    if (abs(m - 35.0) < 0.1) return float3(0.15, 0.40, 0.95); // Opaque Blue Box
+    if (abs(m - 101.0) < 0.1) return float3(0.18, 0.82, 0.95); // Cyan Glass
+    if (abs(m - 102.0) < 0.1) return float3(0.95, 0.55, 0.18); // Amber Glass
     return 0.2 + 0.2 * sin(m * 2. + float3(0., 1., 2.));
 }
 
@@ -70,7 +75,7 @@ float3 shadedColor(
         return float3(0., 0., 0.);
 
     float3 col = code2color(m);
-    float ks = saturate(m / 10);
+    float ks = (m >= 100.0) ? 2.5 : saturate(m / 10);
 
 #ifdef USE_CHECKERBOARD
     if (m < 1.5)

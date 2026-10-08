@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: transparency
+  m_Shader: {fileID: 4800000, guid: 7e6860cdb76d486aaaad9a011aa21aa8, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AA_FACTOR: 1
+    - _CAMERA_SPEED: 0.05
+    - _CAMERA_SPIN: 0.025
+    - _CAMERA_STATIC: 1
+    - _MAX_RAYMARCH_STEPS: 2048
+    - _SUBPIXEL_EDGE_RESOLVE_CONE_MULT: 1
+    - _SUBPIXEL_EDGE_RESOLVE_CONE_MULT_COS: 2
+    - _SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MAX: 0.999
+    - _SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MIN: 0.8
+    - _SUBPIXEL_EDGE_RESOLVE_CURVATURE_THRESHOLD: 0.00001
+    - _SUBPIXEL_EDGE_RESOLVE_TWO_PLANE_INTERSECTION: 1
+    - _TRANSPARENCY_K: 4
+    - _TRANSPARENT_ALPHA_1: 0.45
+    - _TRANSPARENT_ALPHA_2: 0.55
+    - _USE_SUBPIXEL_EDGE_RESOLVE: 1
+    - _USE_TRANSPARENCY: 1
+    m_Colors:
+    - _MousePos: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []

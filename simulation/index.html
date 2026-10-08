@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTSS + SER: Simulação Interativa do Algoritmo de Antialiasing</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="logo-group">
+            <h1>Cone-Traced Supersampling + SER</h1>
+            <p>Simulação Interativa do Algoritmo de Antialiasing para SDFs (TVCG 2023)</p>
+        </div>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="stage-sphere">
+                <span>1.</span> Sphere Tracing & Aliasing
+            </button>
+            <button class="tab-btn" data-tab="stage-ctss">
+                <span>2.</span> Cone Tracing (CTSS)
+            </button>
+            <button class="tab-btn" data-tab="stage-ser">
+                <span>3.</span> Subpixel Edge Resolve (SER)
+            </button>
+            <button class="tab-btn" data-tab="stage-comparison">
+                <span>4.</span> Matriz Comparativa
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-layout">
+        
+        <!-- Left: Stage Visualizers -->
+        <section class="stage-container">
+            
+            <!-- STAGE 1: SPHERE TRACING & ALIASING -->
+            <article class="stage-panel active" id="stage-sphere">
+                <div class="stage-header">
+                    <div>
+                        <h2>1. O Fundamento: Sphere Tracing (Hart 1996) e a Causa do Serrilhado</h2>
+                        <p>O raio dá passos iguais à distância máxima segura (esferas amarelas). Por ser uma linha fina 1D, gera decisões binárias (hit/miss), causando escadinha nos pixels.</p>
+                    </div>
+                    <span class="badge">1 RAIO / PIXEL</span>
+                </div>
+
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-sphere" width="760" height="400"></canvas>
+                </div>
+
+                <div class="playback-bar">
+                    <button class="btn btn-primary" id="s1-btn-play">⏸ Pausar</button>
+                    <button class="btn" id="s1-btn-step-bwd">⏮ Passo Anterior</button>
+                    <button class="btn" id="s1-btn-step-fwd">Passo Seguinte ⏭</button>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: auto;">
+                        💡 <em>Dica: Arraste a Origem (azul) ou Alvo (roxo) com o mouse.</em>
+                    </span>
+                </div>
+            </article>
+
+            <!-- STAGE 2: CONE TRACING & 32-BIT BITMASK (CTSS) -->
+            <article class="stage-panel" id="stage-ctss">
+                <div class="stage-header">
+                    <div>
+                        <h2>2. A Inovação do CTSS: Feixe Cônico e Máscara de Visibilidade de 32 Bits</h2>
+                        <p>O raio é alargado num cone (r = t · tan θ). Silhuetas geram "Soft Hits" e preenchem uma máscara subpixel de 32 bits (A-Buffer), acumulando cobertura ao longo do mesmo raio.</p>
+                    </div>
+                    <span class="badge">1 CONE / PIXEL</span>
+                </div>
+
+                <div class="canvas-ctss-grid">
+                    <div class="canvas-wrapper">
+                        <canvas id="canvas-ctss" width="510" height="400"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="canvas-bitmask" width="240" height="400"></canvas>
+                    </div>
+                </div>
+
+                <div class="playback-bar">
+                    <button class="btn btn-primary" id="s2-btn-play">⏸ Pausar</button>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: auto;">
+                        💡 <em>O cone não para no contorno; ele registra amostras e penetra a profundidade.</em>
+                    </span>
+                </div>
+            </article>
+
+            <!-- STAGE 3: SUBPIXEL EDGE RECONSTRUCTION (SER) -->
+            <article class="stage-panel" id="stage-ser">
+                <div class="stage-header">
+                    <div>
+                        <h2>3. O Arremate: SER (Subpixel Edge Reconstruction) para Quinas Internas</h2>
+                        <p>Quando o cone acerta uma quina viva de frente, o CTSS tem um "ponto cego". O SER detecta a quina via normais de escala dupla e resolve analiticamente o corte dos 2 planos.</p>
+                    </div>
+                    <span class="badge">RESOLUÇÃO ANALÍTICA</span>
+                </div>
+
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-ser" width="760" height="400"></canvas>
+                </div>
+
+                <div class="playback-bar">
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                        💡 <em>Arraste o ponto de amostragem azul dentro da pegada do cone para testar o cálculo de área xi.</em>
+                    </span>
+                </div>
+            </article>
+
+            <!-- STAGE 4: COMPARISON MATRIX -->
+            <article class="stage-panel" id="stage-comparison">
+                <div class="stage-header">
+                    <div>
+                        <h2>4. Matriz Comparativa em Tempo Real: No AA vs SSAA vs CTSS vs CTSS+SER</h2>
+                        <p>Visualização ampliada do sensor em grade de pixels discretos. Observe como o CTSS sozinho resolve silhuetas, mas precisa do SER para eliminar o serrilhado da quina interna.</p>
+                    </div>
+                    <span class="badge">INTERATIVO 60 FPS</span>
+                </div>
+
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-comparison" width="760" height="440"></canvas>
+                </div>
+
+                <div class="playback-bar">
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                        💡 <em>Arraste o mouse horizontalmente sobre os quadrantes para rotacionar o objeto em tempo real.</em>
+                    </span>
+                </div>
+            </article>
+
+        </section>
+
+        <!-- Right: Parameters & Tooltip Inspector -->
+        <aside class="sidebar">
+            
+            <!-- Controls Card -->
+            <div class="sidebar-card">
+                <h3><span>⚙️</span> Parâmetros da Simulação</h3>
+
+                <!-- STAGE 1 PARAMS -->
+                <div class="params-group active" data-group="stage-sphere">
+                    <div class="param-control" data-param-key="stepSizeMult">
+                        <div class="param-header">
+                            <label for="s1-step-size">Multiplicador do Passo</label>
+                            <span class="param-val" id="s1-step-size-val">1.00</span>
+                        </div>
+                        <input type="range" id="s1-step-size" min="0.2" max="1.0" step="0.05" value="1.0">
+                        <span class="param-desc-short">SPHERE_TRACE_STEPSIZE_MULT</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="enableSSAA">
+                        <div class="toggle-wrapper">
+                            <input type="checkbox" id="s1-toggle-ssaa">
+                            <label for="s1-toggle-ssaa">Mostrar Raios 4x SSAA (Força Bruta)</label>
+                        </div>
+                        <span class="param-desc-short">Dispara múltiplos raios paralelos convencionais</span>
+                    </div>
+                </div>
+
+                <!-- STAGE 2 PARAMS -->
+                <div class="params-group" data-group="stage-ctss">
+                    <div class="param-control" data-param-key="tanTheta">
+                        <div class="param-header">
+                            <label for="s2-tan-theta">Abertura do Cone (tan θ)</label>
+                            <span class="param-val" id="s2-tan-theta-val">0.065</span>
+                        </div>
+                        <input type="range" id="s2-tan-theta" min="0.02" max="0.15" step="0.005" value="0.065">
+                        <span class="param-desc-short">Raio do feixe cônico r(t) = t · tan θ</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="occlusionSoft">
+                        <div class="param-header">
+                            <label for="s2-occ-soft">Limiar Soft Hit (Silhueta)</label>
+                            <span class="param-val" id="s2-occ-soft-val">0.00</span>
+                        </div>
+                        <input type="range" id="s2-occ-soft" min="0.0" max="0.3" step="0.02" value="0.0">
+                        <span class="param-desc-short">OCCLUSION_SOFT (início da amostragem)</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="occlusionHard">
+                        <div class="param-header">
+                            <label for="s2-occ-hard">Limiar Hard Hit (Corpo)</label>
+                            <span class="param-val" id="s2-occ-hard-val">0.50</span>
+                        </div>
+                        <input type="range" id="s2-occ-hard" min="0.3" max="0.7" step="0.05" value="0.5">
+                        <span class="param-desc-short">OCCLUSION_HARD (eixo central atingido)</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="occlusionStop">
+                        <div class="param-header">
+                            <label for="s2-occ-stop">Limiar de Parada (Full Hit)</label>
+                            <span class="param-val" id="s2-occ-stop-val">0.99</span>
+                        </div>
+                        <input type="range" id="s2-occ-stop" min="0.5" max="0.99" step="0.05" value="0.99">
+                        <span class="param-desc-short">OCCLUSION_STOP (0.5=Relaxed, 0.99=Full CTSS)</span>
+                    </div>
+                </div>
+
+                <!-- STAGE 3 PARAMS -->
+                <div class="params-group" data-group="stage-ser">
+                    <div class="param-control" data-param-key="creaseAngleDeg">
+                        <div class="param-header">
+                            <label for="s3-crease-angle">Ângulo da Quina (Graus)</label>
+                            <span class="param-val" id="s3-crease-angle-val">55°</span>
+                        </div>
+                        <input type="range" id="s3-crease-angle" min="20" max="90" step="5" value="55">
+                        <span class="param-desc-short">Inclinação diedro entre as faces da aresta</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="cosSimMax">
+                        <div class="param-header">
+                            <label for="s3-cossim-max">Limiar de Sim. de Normais</label>
+                            <span class="param-val" id="s3-cossim-max-val">0.999</span>
+                        </div>
+                        <input type="range" id="s3-cossim-max" min="0.85" max="0.999" step="0.005" value="0.999">
+                        <span class="param-desc-short">_SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MAX</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="coneMultCos">
+                        <div class="param-header">
+                            <label for="s3-cone-cos">Escala Normal Macro (h=mult·Rc)</label>
+                            <span class="param-val" id="s3-cone-cos-val">2.0x</span>
+                        </div>
+                        <input type="range" id="s3-cone-cos" min="1.0" max="4.0" step="0.2" value="2.0">
+                        <span class="param-desc-short">_SUBPIXEL_EDGE_RESOLVE_CONE_MULT_COS</span>
+                    </div>
+
+                    <div class="param-control" data-param-key="coneMult">
+                        <div class="param-header">
+                            <label for="s3-cone-mult">Distância de Busca do Plano</label>
+                            <span class="param-val" id="s3-cone-mult-val">1.0x</span>
+                        </div>
+                        <input type="range" id="s3-cone-mult" min="0.4" max="2.0" step="0.1" value="1.0">
+                        <span class="param-desc-short">_SUBPIXEL_EDGE_RESOLVE_CONE_MULT</span>
+                    </div>
+                </div>
+
+                <!-- STAGE 4 PARAMS -->
+                <div class="params-group" data-group="stage-comparison">
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+                        Esta matriz sintetiza as 4 variações lado a lado em tempo real.
+                        <br><br>
+                        <strong>Arraste o mouse horizontalmente</strong> sobre a grade para inspecionar o comportamento das quinas e silhuetas sob movimento contínuo.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Interactive Tooltip Inspector Card -->
+            <div class="tooltip-inspector visible" id="param-tooltip-card">
+                <div class="tooltip-header">
+                    <h4 id="tooltip-title">Passe o mouse sobre qualquer parâmetro</h4>
+                    <span class="code-badge" id="tooltip-code">INSPETOR TÉCNICO INTERATIVO</span>
+                </div>
+
+                <div>
+                    <div class="section-label">O que é / Definição Matemática:</div>
+                    <div class="section-text" id="tooltip-desc">
+                        Passe o cursor sobre os controles à esquerda para inspecionar exatamente o que cada parâmetro do artigo representa e como ele afeta os cálculos do shader.
+                    </div>
+                </div>
+
+                <div>
+                    <div class="section-label">Efeito na Animação:</div>
+                    <div class="section-text anim-highlight" id="tooltip-anim">
+                        Mostra visualmente no canvas as alterações geométricas em tempo real.
+                    </div>
+                </div>
+
+                <div>
+                    <div class="section-label">Reflexo no Resultado Final:</div>
+                    <div class="section-text result-highlight" id="tooltip-result">
+                        Explica a influência na qualidade de imagem (nitidez, desfoque) e no custo computacional de renderização.
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        Baseado no artigo <em>"Cone-Traced Supersampling with Subpixel Edge Reconstruction"</em> (TVCG 2023) |
+        Repositório local: <a href="file:///home/rafael/Work/ComputacaoGrafica/cone-traced-supersampling">cone-traced-supersampling</a>
+    </footer>
+
+    <!-- App Script (Bundled for direct file:// and localhost compatibility) -->
+    <script src="js/bundle.js"></script>
+</body>
+</html>

@@ -72,6 +72,14 @@ float _SUBPIXEL_EDGE_RESOLVE_COSSIM_THRESHOLD_MIN = 0.9;
 float _SUBPIXEL_EDGE_RESOLVE_CURVATURE_THRESHOLD = 0.00001;
 
 /* ---------------------------------------- */
+// Transparency parameters (K-bitmasks)
+
+float _USE_TRANSPARENCY;
+int _TRANSPARENCY_K;
+float _TRANSPARENT_ALPHA_1;
+float _TRANSPARENT_ALPHA_2;
+
+/* ---------------------------------------- */
 // Sphere tracing parameters
 
 #define TMIN 0.01

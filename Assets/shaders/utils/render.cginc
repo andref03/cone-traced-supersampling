@@ -210,40 +210,21 @@ int bitCountOnes(int num) {
     return count;
 }
 
-// -----------------------------------------------------------------------------
-// PROPOSTA 1: Funções de Cobertura Subpixel Contínua vs. Discreta
-// -----------------------------------------------------------------------------
-
-// Contagem rápida de bits via hardware POPCNT (Shader Model 4.0+)
-int bitCountOnesFast(int num)
+float getSampleAlpha(float id)
 {
-#if defined(SHADER_API_D3D11) || defined(SHADER_API_D3D12) || defined(SHADER_API_VULKAN) || defined(SHADER_API_METAL) || defined(SHADER_API_GLCORE)
-    return countbits(num);
-#else
-    return bitCountOnes(num);
-#endif
+    if (_USE_TRANSPARENCY < 0.5)
+        return 1.0;
+    if (abs(id - 101.0) < 0.1)
+        return clamp(_TRANSPARENT_ALPHA_1, 0.05, 0.95);
+    if (abs(id - 102.0) < 0.1)
+        return clamp(_TRANSPARENT_ALPHA_2, 0.05, 0.95);
+    return 1.0;
 }
 
-// 1. Função Analítica Contínua de Área do Segmento Circular (Proposta Central)
-// Dado coneOcclusion w em [0, 1], calcula a fração contínua exata da área
-// de um disco unitário cortado por uma reta a uma distância normalizada h do centro:
-// A(h) = (acos(-h) + h * sqrt(1 - h^2)) / PI
-float getContinuousCircularCoverage(float coneOcclusion)
+bool isTransparentSample(float id)
 {
-    float w = saturate(coneOcclusion);
-    // h em [-1, 1], distância com sinal da reta de corte ao centro do cone
-    float h = clamp(2.0 * w - 1.0, -0.9999, 0.9999);
-    const float PI = 3.14159265358979323846;
-    return saturate((acos(-h) + h * sqrt(1.0 - h * h)) / PI);
+    return (_USE_TRANSPARENCY > 0.5) && (id >= 100.0 && id <= 110.0);
 }
-
-// 2. Aproximação Polinomial Suave Contínua (Smoothstep C1)
-float getSmoothstepCoverage(float coneOcclusion)
-{
-    float w = saturate(coneOcclusion);
-    return smoothstep(0.0, 1.0, w);
-}
-
 
 #ifdef USE_SUBPIXEL_EDGE_RESOLVE
 float resolve_primary_edge_visibility(const float3 n1, const float3 n2, float h1, float h2,
@@ -323,9 +304,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
 #ifdef USE_CTSS_WEIGHTED
     int visibilityMask = 0;
-    float accumulatedContinuousCoverage = 0.0;
-    float2 prevNor2d = float2(0.0, 0.0);
-    float prevCoverage = 0.0;
+    int k_masks[4] = { 0, 0, 0, 0 };
 #endif
 
     // previous values for hasHit, hardHit, and sdf call
@@ -349,11 +328,12 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     }
 #endif
 
+    bool inTransparency = false;
     int numSteps = 0;
     for (; numSteps < _MAX_RAYMARCH_STEPS && t < t_max && numSamples < CTSS_NUM_SAMPLES; numSteps++)
     {
         float3 p = ro + rd * t;
-        float2 h = sdf(p);
+        float2 h = inTransparency ? sdf_opaque(p) : sdf(p);
 
         float coneRad = t * tan_theta;
         float coneOcclusion = (1. - h.x / coneRad) / 2.;
@@ -429,8 +409,19 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
         if (fullHit)
         {
-            hasFullHit = true;
-            break;
+            if (isTransparentSample(h.y) && !inTransparency)
+            {
+                // Continue sphere tracing past the transparent surface intersection
+                inTransparency = true;
+                hasHitP = false;
+                hardHitP = false;
+                t += max(coneRad * 2.5, 0.08);
+            }
+            else
+            {
+                hasFullHit = true;
+                break;
+            }
         }
 
         // update previous h and t
@@ -614,53 +605,42 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
             nor2d = normal2dResolvedEdge;
 #endif
 
-        // compute visibility and weights based on selected coverage mode
-        float weight = MIN_SAMPLE_WEIGHT;
+        // compute current visibility mask given pixel projected normal and group's maximum cone occlusion
+        int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
 
-        if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK)
+        float weight = 0.0;
+        if (_USE_TRANSPARENCY > 0.5)
         {
-            // MODO 0: Baseline original dos autores (Bitmask 32-bit com loop iterativo)
-            int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
-            visibilityMaskCrt &= ~visibilityMask; // correlaciona com anteriores
-            visibilityMask |= visibilityMaskCrt;
-            float visibility = bitCountOnes(visibilityMaskCrt) / 32.0;
-            weight = max(MIN_SAMPLE_WEIGHT, visibility);
-        }
-        else if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK_POPCNT)
-        {
-            // MODO 1: Bitmask 32-bit com hardware POPCNT nativo (countbits)
-            int visibilityMaskCrt = getVisibilityMask(sample.occlusion, nor2d);
-            visibilityMaskCrt &= ~visibilityMask;
-            visibilityMask |= visibilityMaskCrt;
-            float visibility = bitCountOnesFast(visibilityMaskCrt) / 32.0;
-            weight = max(MIN_SAMPLE_WEIGHT, visibility);
+            // K-bitmasks non-binary visibility accumulation (TVCG 2023 Sec. VI)
+            int K = clamp(_TRANSPARENCY_K, 2, 4);
+            float alpha = getSampleAlpha(sample.id);
+            int L = (alpha >= 0.99) ? K : max(1, (int)round(alpha * (float)K));
+
+            int totalAddedBits = 0;
+            for (int l = 0; l < L; l++)
+            {
+                for (int k = 0; k < K; k++)
+                {
+                    int available = visibilityMaskCrt & (~k_masks[k]);
+                    if (available != 0)
+                    {
+                        k_masks[k] |= available;
+                        totalAddedBits += bitCountOnes(available);
+                        break;
+                    }
+                }
+            }
+            float visRatio = (float)totalAddedBits / (float)(K * 32);
+            weight = max(MIN_SAMPLE_WEIGHT, visRatio);
         }
         else
         {
-            // MODO 2 ou 3: Cobertura Contínua (Analítica ou Polinomial Suave)
-            float sampleCoverage = (_COVERAGE_MODE == COVERAGE_MODE_SMOOTHSTEP) ?
-                getSmoothstepCoverage(sample.occlusion) :
-                getContinuousCircularCoverage(sample.occlusion);
+            // Original binary visibility mask (Before)
+            visibilityMaskCrt &= ~visibilityMask; // correlation with previous hits, removes invisible bits
+            visibilityMask |= visibilityMaskCrt; // update visibility mask given current visibility, adds visible bits
 
-            float visibleFrac = 0.0;
-            if (i == 0)
-            {
-                visibleFrac = sampleCoverage;
-                accumulatedContinuousCoverage = sampleCoverage;
-            }
-            else
-            {
-                // Correlação direcional suave baseada no alinhamento das normais
-                float normalAlignment = dot(nor2d, prevNor2d);
-                float overlapFactor = saturate((1.0 + normalAlignment) * 0.5);
-                float effectivePriorOcclusion = prevCoverage * overlapFactor;
-                visibleFrac = clamp(sampleCoverage - effectivePriorOcclusion, 0.0, 1.0 - accumulatedContinuousCoverage);
-                accumulatedContinuousCoverage = saturate(accumulatedContinuousCoverage + visibleFrac);
-            }
-
-            prevNor2d = nor2d;
-            prevCoverage = sampleCoverage;
-            weight = max(MIN_SAMPLE_WEIGHT, visibleFrac);
+            float visibility = bitCountOnes(visibilityMaskCrt) / 32.; // visible bit ratio
+            weight = max(MIN_SAMPLE_WEIGHT, visibility);
         }
 #else
         float weight = 1.0;
@@ -676,18 +656,20 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     if (!hasFullHit)
     {
 #ifdef USE_CTSS_WEIGHTED
-        float bgWeight = 1.0;
-        if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK)
+        float bgWeight;
+        if (_USE_TRANSPARENCY > 0.5)
         {
-            bgWeight = 1.0 - bitCountOnes(visibilityMask) / 32.0;
-        }
-        else if (_COVERAGE_MODE == COVERAGE_MODE_BITMASK_POPCNT)
-        {
-            bgWeight = 1.0 - bitCountOnesFast(visibilityMask) / 32.0;
+            int K = clamp(_TRANSPARENCY_K, 2, 4);
+            int totalOccupied = 0;
+            for (int k = 0; k < K; k++)
+            {
+                totalOccupied += bitCountOnes(k_masks[k]);
+            }
+            bgWeight = max(0.0, 1.0 - (float)totalOccupied / (float)(K * 32));
         }
         else
         {
-            bgWeight = saturate(1.0 - accumulatedContinuousCoverage);
+            bgWeight = 1.0 - bitCountOnes(visibilityMask) / 32.0;
         }
 #else
         float bgWeight = 1.0;

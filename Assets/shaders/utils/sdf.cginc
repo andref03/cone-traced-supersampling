@@ -1,4 +1,4 @@
-﻿#ifndef SDF_H
+#ifndef SDF_H
 #define SDF_H
 
 /* SDF params and functions */
@@ -20,8 +20,14 @@
 #include "sdfs/sdf_sponza.cginc"
 #elif SCENE == SCENE_SPONZA_SHOWCASE
 #include "sdfs/sdf_sponza_showcase.cginc"
+#elif SCENE == SCENE_TRANSPARENCY
+#include "sdfs/sdf_transparency.cginc"
 #else
 #include "sdfs/sdf_primitives.cginc"
+#endif
+
+#if SCENE != SCENE_TRANSPARENCY
+float2 sdf_opaque(in float3 p) { return sdf(p); }
 #endif
 
 /* ---------------------------------------- */
