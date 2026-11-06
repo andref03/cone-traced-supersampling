@@ -71,7 +71,7 @@ Shader "Unlit/transparency"
 
                 float2 mo = _MousePos.xy + float2(0.4, 0.25);
 
-                float3 ta = float3(0.05, 0.40, 0.35);
+                float3 ta = float3(0.0, 0.45, 0.40);
                 float3 ro = ta + 4.2 * float3(sin(6.28 * (mo.x + t)), 0.9 * mo.y + 0.2, cos(6.28 * (mo.x + t)));
 
                 float tan_theta = 2. * PIXEL_SIZE_MULT / _ScreenParams.y / FOCAL_LENGTH;
