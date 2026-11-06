@@ -64,6 +64,7 @@ float3 code2color( const in float m )
     if (abs(m - 35.0) < 0.1) return float3(0.15, 0.40, 0.95); // Opaque Blue Box
     if (abs(m - 101.0) < 0.1) return float3(0.18, 0.82, 0.95); // Cyan Glass
     if (abs(m - 102.0) < 0.1) return float3(0.95, 0.55, 0.18); // Amber Glass
+    if (abs(m - 103.0) < 0.1) return float3(0.95, 0.20, 0.75); // Magenta Glass
     return 0.2 + 0.2 * sin(m * 2. + float3(0., 1., 2.));
 }
 

@@ -24,18 +24,24 @@
 #include "sdfs/sdf_transparency.cginc"
 #elif SCENE == SCENE_TRANSPARENCY_LAYERS
 #include "sdfs/sdf_transparency_layers.cginc"
+#elif SCENE == SCENE_TRANSPARENCY_ROW
+#include "sdfs/sdf_transparency_row.cginc"
 #else
 #include "sdfs/sdf_primitives.cginc"
 #endif
 
-#if SCENE == SCENE_TRANSPARENCY_LAYERS
-float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return sdf_query(p, hitL1, hitL2); }
+#if SCENE == SCENE_TRANSPARENCY_ROW
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2, in bool hitL3) { return sdf_query(p, hitL1, hitL2, hitL3); }
+#elif SCENE == SCENE_TRANSPARENCY_LAYERS
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2, in bool hitL3) { return sdf_query(p, hitL1, hitL2); }
 #elif SCENE == SCENE_TRANSPARENCY
-float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return (hitL1 || hitL2) ? sdf_opaque(p) : sdf(p); }
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2, in bool hitL3) { return (hitL1 || hitL2 || hitL3) ? sdf_opaque(p) : sdf(p); }
 #else
 float2 sdf_opaque(in float3 p) { return sdf(p); }
-float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return (hitL1 || hitL2) ? sdf_opaque(p) : sdf(p); }
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2, in bool hitL3) { return (hitL1 || hitL2 || hitL3) ? sdf_opaque(p) : sdf(p); }
 #endif
+
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return querySDF(p, hitL1, hitL2, false); }
 
 /* ---------------------------------------- */
 

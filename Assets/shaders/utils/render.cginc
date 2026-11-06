@@ -218,6 +218,8 @@ float getSampleAlpha(float id)
         return clamp(_TRANSPARENT_ALPHA_1, 0.05, 0.95);
     if (abs(id - 102.0) < 0.1)
         return clamp(_TRANSPARENT_ALPHA_2, 0.05, 0.95);
+    if (abs(id - 103.0) < 0.1)
+        return clamp(_TRANSPARENT_ALPHA_3, 0.05, 0.95);
     return 1.0;
 }
 
@@ -313,11 +315,12 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
     bool hitTransL1 = false;
     bool hitTransL2 = false;
+    bool hitTransL3 = false;
     int numSteps = 0;
     for (; numSteps < _MAX_RAYMARCH_STEPS && t < t_max && numSamples < CTSS_NUM_SAMPLES; numSteps++)
     {
         float3 p = ro + rd * t;
-        float2 h = querySDF(p, hitTransL1, hitTransL2);
+        float2 h = querySDF(p, hitTransL1, hitTransL2, hitTransL3);
 
         float coneRad = t * tan_theta;
         float coneOcclusion = (1. - h.x / coneRad) / 2.;
@@ -410,11 +413,19 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
                     hardHitP = false;
                     t += max(coneRad * 2.5, 0.18);
                 }
+                else if (abs(h.y - 103.0) < 0.1 && !hitTransL3)
+                {
+                    hitTransL3 = true;
+                    hasHitP = false;
+                    hardHitP = false;
+                    t += max(coneRad * 2.5, 0.18);
+                }
                 else if (!hitTransL1)
                 {
                     // Fallback para cena com um único objeto transparente
                     hitTransL1 = true;
                     hitTransL2 = true;
+                    hitTransL3 = true;
                     hasHitP = false;
                     hardHitP = false;
                     t += max(coneRad * 2.5, 0.10);

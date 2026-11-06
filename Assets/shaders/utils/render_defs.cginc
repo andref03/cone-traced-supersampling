@@ -63,6 +63,7 @@ float _USE_TRANSPARENCY;
 int _TRANSPARENCY_K;
 float _TRANSPARENT_ALPHA_1;
 float _TRANSPARENT_ALPHA_2;
+float _TRANSPARENT_ALPHA_3;
 
 /* ---------------------------------------- */
 // Sphere tracing parameters
