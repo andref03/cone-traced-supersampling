@@ -22,12 +22,19 @@
 #include "sdfs/sdf_sponza_showcase.cginc"
 #elif SCENE == SCENE_TRANSPARENCY
 #include "sdfs/sdf_transparency.cginc"
+#elif SCENE == SCENE_TRANSPARENCY_LAYERS
+#include "sdfs/sdf_transparency_layers.cginc"
 #else
 #include "sdfs/sdf_primitives.cginc"
 #endif
 
-#if SCENE != SCENE_TRANSPARENCY
+#if SCENE == SCENE_TRANSPARENCY_LAYERS
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return sdf_query(p, hitL1, hitL2); }
+#elif SCENE == SCENE_TRANSPARENCY
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return (hitL1 || hitL2) ? sdf_opaque(p) : sdf(p); }
+#else
 float2 sdf_opaque(in float3 p) { return sdf(p); }
+float2 querySDF(in float3 p, in bool hitL1, in bool hitL2) { return (hitL1 || hitL2) ? sdf_opaque(p) : sdf(p); }
 #endif
 
 /* ---------------------------------------- */

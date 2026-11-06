@@ -74,6 +74,12 @@ namespace shaders
                 var s = Shader.Find("Unlit/grid_box");
                 if (s != null) { this.mat.shader = s; Debug.Log("Cena trocada: 4. Grid Box"); }
             }
+
+            if (Input.GetKeyDown(KeyCode.Alpha5))
+            {
+                var s = Shader.Find("Unlit/transparency_layers");
+                if (s != null) { this.mat.shader = s; Debug.Log("Cena trocada: 5. Transparency Multi-layer (2 Camadas)"); }
+            }
         }
     }
 }

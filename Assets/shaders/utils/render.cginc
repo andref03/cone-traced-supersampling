@@ -287,7 +287,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
 #ifdef USE_CTSS_WEIGHTED
     int visibilityMask = 0;
-    int k_masks[4] = { 0, 0, 0, 0 };
+    int k_masks[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 #endif
 
     // previous values for hasHit, hardHit, and sdf call
@@ -311,12 +311,13 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
     }
 #endif
 
-    bool inTransparency = false;
+    bool hitTransL1 = false;
+    bool hitTransL2 = false;
     int numSteps = 0;
     for (; numSteps < _MAX_RAYMARCH_STEPS && t < t_max && numSamples < CTSS_NUM_SAMPLES; numSteps++)
     {
         float3 p = ro + rd * t;
-        float2 h = inTransparency ? sdf_opaque(p) : sdf(p);
+        float2 h = querySDF(p, hitTransL1, hitTransL2);
 
         float coneRad = t * tan_theta;
         float coneOcclusion = (1. - h.x / coneRad) / 2.;
@@ -392,13 +393,37 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
 
         if (fullHit)
         {
-            if (isTransparentSample(h.y) && !inTransparency)
+            if (isTransparentSample(h.y))
             {
-                // Continue sphere tracing past the transparent surface intersection
-                inTransparency = true;
-                hasHitP = false;
-                hardHitP = false;
-                t += max(coneRad * 2.5, 0.08);
+                // Continuação do raio em multicamadas transparentes:
+                if (abs(h.y - 102.0) < 0.1 && !hitTransL1)
+                {
+                    hitTransL1 = true;
+                    hasHitP = false;
+                    hardHitP = false;
+                    t += max(coneRad * 2.5, 0.18);
+                }
+                else if (abs(h.y - 101.0) < 0.1 && !hitTransL2)
+                {
+                    hitTransL2 = true;
+                    hasHitP = false;
+                    hardHitP = false;
+                    t += max(coneRad * 2.5, 0.18);
+                }
+                else if (!hitTransL1)
+                {
+                    // Fallback para cena com um único objeto transparente
+                    hitTransL1 = true;
+                    hitTransL2 = true;
+                    hasHitP = false;
+                    hardHitP = false;
+                    t += max(coneRad * 2.5, 0.10);
+                }
+                else
+                {
+                    hasFullHit = true;
+                    break;
+                }
             }
             else
             {
@@ -595,7 +620,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
         if (_USE_TRANSPARENCY > 0.5)
         {
             // K-bitmasks non-binary visibility accumulation (TVCG 2023 Sec. VI)
-            int K = clamp(_TRANSPARENCY_K, 2, 4);
+            int K = clamp(_TRANSPARENCY_K, 2, 8);
             float alpha = getSampleAlpha(sample.id);
             int L = (alpha >= 0.99) ? K : max(1, (int)round(alpha * (float)K));
 
@@ -642,7 +667,7 @@ float3 render(const float3 ro, const float3 rd, const float tan_theta, const flo
         float bgWeight;
         if (_USE_TRANSPARENCY > 0.5)
         {
-            int K = clamp(_TRANSPARENCY_K, 2, 4);
+            int K = clamp(_TRANSPARENCY_K, 2, 8);
             int totalOccupied = 0;
             for (int k = 0; k < K; k++)
             {
