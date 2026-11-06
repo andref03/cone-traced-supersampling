@@ -6,6 +6,12 @@ namespace shaders
     public class Controller : MonoBehaviour
     {
         private Material mat;
+        private Vector4 mousePos = new Vector4(1f, 0f, 0f, 0f);
+        [Header("Camera Controls")]
+        [Tooltip("Sensibilidade da movimentação da câmera pelas setas do teclado.")]
+        [Range(0.05f, 2.5f)]
+        [SerializeField] private float cameraMoveSpeed = 0.6f;
+
         private bool showTrans1 = true;
         private bool showTrans2 = true;
         private bool showTrans3 = true;
@@ -14,7 +20,13 @@ namespace shaders
         {
             this.mat = this.GetComponent<Renderer>().material;
 
-            this.mat.SetVector("_MousePos", new Vector4(1f, 0f, 0f, 0f));
+            if (this.mat.HasProperty("_MousePos"))
+            {
+                this.mousePos = this.mat.GetVector("_MousePos");
+                if (this.mousePos == Vector4.zero)
+                    this.mousePos = new Vector4(1f, 0f, 0f, 0f);
+            }
+            this.mat.SetVector("_MousePos", this.mousePos);
 
             if (this.mat.HasProperty("_SHOW_TRANS_1"))
                 showTrans1 = this.mat.GetFloat("_SHOW_TRANS_1") > 0.5f;
@@ -31,11 +43,57 @@ namespace shaders
 
         void Update()
         {
+            // Controle da câmera pelo clique e arraste do mouse
             if (Input.GetMouseButton(0))
             {
                 var pos = Input.mousePosition;
-                this.mat.SetVector("_MousePos", new Vector4(1f - pos.x / Screen.width, pos.y / Screen.height, 0f, 0f));
+                this.mousePos = new Vector4(1f - pos.x / Screen.width, pos.y / Screen.height, 0f, 0f);
+                this.mat.SetVector("_MousePos", this.mousePos);
                 Debug.Log("mousePosition " + pos);
+            }
+
+            // Controle da câmera pelas setinhas do teclado
+            float currentSpeed = cameraMoveSpeed;
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            {
+                currentSpeed *= 2.0f; // velocidade rápida com Shift
+            }
+
+            bool cameraMoved = false;
+
+            // Seta Esquerda: gira a câmera em órbita horizontal para a esquerda
+            if (Input.GetKey(KeyCode.LeftArrow))
+            {
+                this.mousePos.x += currentSpeed * Time.deltaTime;
+                cameraMoved = true;
+            }
+
+            // Seta Direita: gira a câmera em órbita horizontal para a direita
+            if (Input.GetKey(KeyCode.RightArrow))
+            {
+                this.mousePos.x -= currentSpeed * Time.deltaTime;
+                cameraMoved = true;
+            }
+
+            // Seta Cima: eleva a câmera / visualiza em ângulo mais alto
+            if (Input.GetKey(KeyCode.UpArrow))
+            {
+                this.mousePos.y += currentSpeed * Time.deltaTime;
+                cameraMoved = true;
+            }
+
+            // Seta Baixo: abaixa a câmera / aproxima do plano do chão
+            if (Input.GetKey(KeyCode.DownArrow))
+            {
+                this.mousePos.y -= currentSpeed * Time.deltaTime;
+                cameraMoved = true;
+            }
+
+            if (cameraMoved)
+            {
+                // Limita a elevação para manter a visão coerente e não inverter
+                this.mousePos.y = Mathf.Clamp(this.mousePos.y, -0.3f, 1.25f);
+                this.mat.SetVector("_MousePos", this.mousePos);
             }
 
             if (Input.GetKeyDown(KeyCode.S))
@@ -47,9 +105,21 @@ namespace shaders
 
             if (Input.GetKeyDown(KeyCode.R))
             {
-                Vector3 pos = new Vector3(0f, 0f, 0f);
-                this.mat.SetVector("_MousePos", new Vector4(1f - pos.x / Screen.width, pos.y / Screen.height, 0f, 0f));
+                this.mousePos = new Vector4(1f, 0f, 0f, 0f);
+                this.mat.SetVector("_MousePos", this.mousePos);
                 Debug.Log("Reset mouse position to default.");
+            }
+
+            // Ajuste rápido de sensibilidade pelo teclado (+ e -)
+            if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
+            {
+                cameraMoveSpeed = Mathf.Min(2.5f, cameraMoveSpeed + 0.1f);
+                Debug.Log("Sensibilidade da câmera: " + cameraMoveSpeed.ToString("F2"));
+            }
+            if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
+            {
+                cameraMoveSpeed = Mathf.Max(0.05f, cameraMoveSpeed - 0.1f);
+                Debug.Log("Sensibilidade da câmera: " + cameraMoveSpeed.ToString("F2"));
             }
 
             if (Input.GetKeyDown(KeyCode.T))
@@ -135,7 +205,7 @@ namespace shaders
         void OnGUI()
         {
             // Interface gráfica interativa na tela com botões clicáveis
-            GUILayout.BeginArea(new Rect(12, 12, 280, 360), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(12, 12, 280, 475), GUI.skin.box);
             GUILayout.Label("<b>Controle de Transparência (3 Camadas)</b>");
 
             bool curTrans = this.mat.HasProperty("_USE_TRANSPARENCY") && this.mat.GetFloat("_USE_TRANSPARENCY") > 0.5f;
@@ -202,6 +272,16 @@ namespace shaders
                 if (s != null) this.mat.shader = s;
             }
             GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+            GUILayout.Label("<b>Câmera:</b> Setas (↑ ↓ ← →)");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(string.Format("Sensibilidade: {0:F2}", cameraMoveSpeed), GUILayout.Width(130));
+            if (GUILayout.Button("-", GUILayout.Width(28))) cameraMoveSpeed = Mathf.Max(0.05f, cameraMoveSpeed - 0.1f);
+            if (GUILayout.Button("+", GUILayout.Width(28))) cameraMoveSpeed = Mathf.Min(2.5f, cameraMoveSpeed + 0.1f);
+            GUILayout.EndHorizontal();
+            cameraMoveSpeed = GUILayout.HorizontalSlider(cameraMoveSpeed, 0.05f, 2.5f);
+            GUILayout.Label("<size=10><color=#999999>Shift: 2x Vel. | R: Reset | +/-: Ajuste</color></size>");
 
             GUILayout.EndArea();
         }
