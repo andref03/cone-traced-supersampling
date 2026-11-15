@@ -84,4 +84,5 @@ O script de controle (`Controller.cs`) fornece um painel na tela e os seguintes 
 
 ## Referência Base
 
-* CHUBARAU, Andrei et al. **Cone-Traced Supersampling with Subpixel Edge Reconstruction**. *IEEE Transactions on Visualization and Computer Graphics*, v. 30, n. 5, p. 1-12, 2024. DOI: [10.1109/TVCG.2023.3343166](https://doi.org/10.1109/TVCG.2023.3343166).
+* **Artigo Original:** CHUBARAU, Andrei et al. **Cone-Traced Supersampling with Subpixel Edge Reconstruction**. *IEEE Transactions on Visualization and Computer Graphics*, v. 30, n. 5, p. 1-12, 2024. DOI: [10.1109/TVCG.2023.3343166](https://doi.org/10.1109/TVCG.2023.3343166).
+* **Repositório Base (Original):** [ch-andrei/cone-traced-supersampling](https://github.com/ch-andrei/cone-traced-supersampling)
