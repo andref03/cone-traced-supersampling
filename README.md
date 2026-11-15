@@ -36,7 +36,7 @@ Na *baseline* original, o vidro âmbar atua como um bloco sólido e oculta a esf
 
 | Baseline (CTSS Original - Bloqueio Opaco) | Proposta (Transparência Ativa com $K$-Bitmasks) |
 | :---: | :---: |
-| ![Baseline](images/transparency-no-applied.png) | ![Proposta](images/transparency-applied.png) |
+| ![Baseline](Assets/images/transparency-no-applied.png) | ![Proposta](Assets/images/transparency-applied.png) |
 
 ---
 
@@ -45,7 +45,7 @@ Validação do algoritmo com sobreposição sucessiva de 2 e 3 volumes translúc
 
 | Teste com 2 Camadas | Teste de Estresse com 3 Camadas Alinhadas |
 | :---: | :---: |
-| ![2 Camadas](images/transparency-2-layers.png) | ![3 Camadas](images/transparency-3-layers.png) |
+| ![2 Camadas](Assets/images/transparency-2-layers.png) | ![3 Camadas](Assets/images/transparency-3-layers.png) |
 
 ---
 
@@ -54,7 +54,7 @@ Comparação entre o *Sphere Tracing* tradicional pontual (sem anti-aliasing) e 
 
 | Sem Anti-Aliasing (Sphere Tracing Puro) | Com Anti-Aliasing Analítico (CTSS) |
 | :---: | :---: |
-| ![Sem AA](images/CTSS-no-applied.png) | ![Com CTSS](images/CTSS-applied.png) |
+| ![Sem AA](Assets/images/CTSS-no-applied.png) | ![Com CTSS](Assets/images/CTSS-applied.png) |
 
 ---
 
@@ -66,7 +66,7 @@ Comparação entre o *Sphere Tracing* tradicional pontual (sem anti-aliasing) e 
 ### Passos
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/cone-traced-supersampling.git
+   git clone https://github.com/andref03/cone-traced-supersampling.git
    ```
 2. Abra a pasta do projeto no **Unity Hub**.
 3. No painel *Project*, navegue até a pasta `Assets/scenes/` (ou abra diretamente a cena principal `CTSS_transparency_row.unity`).
